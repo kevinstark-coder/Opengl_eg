@@ -1,0 +1,55 @@
+// Input vertex data, different for all executions of this shader.
+attribute vec3 vertexPosition_modelspace;
+attribute vec2 vertexUV;
+attribute vec3 vertexNormal_modelspace;
+attribute vec3 vertexColor;
+
+// Output data ; will be interpolated for each fragment.
+varying vec2 UV;
+varying vec3 Position_worldspace;
+varying vec3 Normal_cameraspace;
+varying vec3 EyeDirection_cameraspace;
+varying vec3 LightDirection_cameraspace;
+
+// Values that stay constant for the whole mesh.
+uniform mat4 MVP;
+uniform mat4 V;
+uniform mat4 M;
+
+// Define the maximum number of lights (same as in the fragment shader)
+const int MaxLights = 4;
+
+// Light positions in world space (provided by the main code)
+uniform vec3 LightPositions_worldspace[MaxLights];
+
+// Output data ; will be interpolated for each fragment.
+varying vec3 fragmentColor;
+
+void main(){
+	
+	// Output position of the vertex, in clip space : MVP * position
+	gl_Position =  MVP * vec4(vertexPosition_modelspace, 1);
+	
+	// Position of the vertex, in world space: M * position
+	Position_worldspace = (M * vec4(vertexPosition_modelspace, 1)).xyz;
+	
+	// Vector that goes from the vertex to the camera, in camera space.
+	vec3 vertexPosition_cameraspace = ( V * M * vec4(vertexPosition_modelspace, 1)).xyz;
+	EyeDirection_cameraspace = vec3(0, 0, 0) - vertexPosition_cameraspace;
+
+	// Initialize the total light direction in camera space
+	LightDirection_cameraspace = vec3(0.0);
+
+	// Calculate the light direction for each light source
+	for (int i = 0; i < MaxLights; i++) {
+		vec3 LightPosition_cameraspace = (V * vec4(LightPositions_worldspace[i], 1)).xyz;
+		LightDirection_cameraspace += LightPosition_cameraspace - vertexPosition_cameraspace;
+	}
+	
+	// Normal of the vertex, in camera space
+	Normal_cameraspace = ( V * M * vec4(vertexNormal_modelspace, 0)).xyz;
+	
+	// UV of the vertex. No special space for this one.
+	UV = vertexUV;
+	fragmentColor = vertexColor;
+}
